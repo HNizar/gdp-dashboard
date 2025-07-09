@@ -9,7 +9,7 @@ from datetime import datetime
 import json
 import re
 
-# Dictionnaire de mappage ville -> région (incluant les 13 régions métropolitaines et 5 régions d'outre-mer)
+# Dictionnaire de mappage ville -> région 
 VILLE_TO_REGION = {
     # Auvergne-Rhône-Alpes
     'Lyon': 'Auvergne-Rhône-Alpes',
