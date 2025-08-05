@@ -1,0 +1,512 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "weviiApii",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "5eb4ee63-66fa-4a8d-9e89-705bea93e610",
+      "name": "Webhook",
+      "webhookId": "35b30ae9-415c-4c52-8c63-c86be5ef5ef4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "89d43455-4173-443b-b6aa-b83de8127970",
+              "name": "ID",
+              "value": "=1",
+              "type": "number"
+            },
+            {
+              "id": "75db3950-b22e-4b4a-af42-02c6ccf10d9e",
+              "name": "POSTE",
+              "value": "={{ $json.POSTE[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "ca326e16-b06c-4bfc-91e1-a23f9f84c240",
+              "name": "DESCRIPTION",
+              "value": "={{ $json.DESCRIPTION[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "cd728a53-8a91-4fd4-97d1-4201fb4ce8ef",
+              "name": "SKILLS",
+              "value": "={{ $json.SKILLS }}",
+              "type": "string"
+            },
+            {
+              "id": "404fb71b-7e12-4764-b886-34ec392ab3c8",
+              "name": "ENVIRONMENT",
+              "value": "={{ $json.ENVIRONMENT }}",
+              "type": "string"
+            },
+            {
+              "id": "ad64a4fa-6500-4483-9727-3e988236a0cd",
+              "name": "LANGUAGE",
+              "value": "={{ $json.LANGUAGE }}",
+              "type": "string"
+            },
+            {
+              "id": "3f51fb48-7ca7-4ca7-98d3-2ab4c6048212",
+              "name": "DOMAIN",
+              "value": "={{ $json.DOMAIN }}",
+              "type": "string"
+            },
+            {
+              "id": "3ed82532-3306-4902-b875-61f61db5e6bb",
+              "name": "VILLE",
+              "value": "={{ $json.VILLE }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        880,
+        0
+      ],
+      "id": "ffc669e3-896c-4905-a97b-fda10f8c3a5c",
+      "name": "Mapping"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://8c1c-176-175-194-1.ngrok-free.app/trigger",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"request_id\": \"1\"\n}  ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1552,
+        0
+      ],
+      "id": "03e16191-019f-4699-9f5f-d3b14326eebe",
+      "name": "HTTP Request",
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "language": "python",
+        "pythonCode": "import re\n\n# Fonction pour extraire les informations demandées\ndef extraire_informations(texte):\n    resultat = {\n        \"DESCRIPTION\": [],\n        \"POSTE\": [],\n        \"SKILLS\": [],\n        \"ENVIRONMENT\": [],\n        \"LANGUAGE\": [],\n        \"DOMAIN\": [],\n        \"VILLE\": []\n    }\n\n    # Extraction de la DESCRIPTION (prendre le texte brut ou une section introductive)\n    description_match = re.search(r\"^(.*?)(?=Code profil|\\n[A-Z]{2,})\", texte, re.DOTALL)\n    if description_match:\n        resultat[\"DESCRIPTION\"].append(description_match.group(1).strip())\n    else:\n        resultat[\"DESCRIPTION\"].append(texte.strip())  # Fallback : prendre tout le texte\n\n    # Extraction du POSTE (généralisation pour différents formats)\n    poste_match = re.search(r\"Code profil.*? - (.*?)-M\", texte, re.DOTALL)\n    if poste_match:\n        resultat[\"POSTE\"].append(poste_match.group(1).strip())\n    else:\n        # Alternative : chercher des mots comme \"Analyst\", \"Développeur\", etc.\n        poste_alt_match = re.search(r\"(Data Analyst|Développeur|Ingénieur|Consultant)\\b\", texte, re.IGNORECASE)\n        if poste_alt_match:\n            resultat[\"POSTE\"].append(poste_alt_match.group(0).strip())\n\n    # Extraction des SKILLS (Compétences techniques et autres mentions)\n    competences_techniques = re.findall(r\"Compétences techniques (.*?)(?=\\nConnaissances linguistiques|\\n[A-Z]{2,}|$)\", texte, re.DOTALL)\n    if competences_techniques:\n        for comp in competences_techniques[0].strip().split(\"\\n\"):\n            if comp.strip():\n                resultat[\"SKILLS\"].append(comp.strip())\n    # Ajouter des compétences détectées ailleurs dans le texte (exemples génériques)\n    common_skills = [\"Python\", \"SQL\", \"Azure\", \"BI\", \"Java\", \"AWS\", \"Docker\", \"Kubernetes\", \"Javascript\", \"Datadog\"]\n    for skill in common_skills:\n        if re.search(rf\"\\b{skill}\\b\", texte, re.IGNORECASE) and skill not in resultat[\"SKILLS\"]:\n            resultat[\"SKILLS\"].append(skill)\n\n    # Extraction de l'ENVIRONMENT (exemples comme Agile, Scrum, etc.)\n    common_environments = [\"Agile\", \"Scrum\", \"DevOps\", \"Kanban\"]\n    for env in common_environments:\n        if re.search(rf\"\\b{env}\\b\", texte, re.IGNORECASE):\n            resultat[\"ENVIRONMENT\"].append(env)\n\n    # Extraction des LANGUAGE (Connaissances linguistiques)\n    competences_linguistiques = re.findall(r\"Connaissances linguistiques\\s*:\\s*(.*?)(?=\\n[A-Z]{2,}|\\n-|\\n\\n|$)\", texte, re.DOTALL)\n    if competences_linguistiques:\n        # Nettoyer et diviser les langues\n        langues_text = competences_linguistiques[0].strip()\n        # Supprimer les annotations comme \"(Impératif)\"\n        langues_text = re.sub(r\"\\([^()]*\\)\", \"\", langues_text).strip()\n        # Diviser par des séparateurs comme \",\" ou \"et\"\n        langues = re.split(r\",| et \", langues_text)\n        for langue in langues:\n            langue_clean = langue.strip()\n            if langue_clean:\n                resultat[\"LANGUAGE\"].append(langue_clean)\n    # Ajouter des langues détectées ailleurs (exemples génériques)\n    common_languages = [\"Anglais\", \"Français\", \"Espagnol\", \"Allemand\"]\n    for lang in common_languages:\n        if re.search(rf\"\\b{lang}\\b\", texte, re.IGNORECASE) and lang not in resultat[\"LANGUAGE\"]:\n            resultat[\"LANGUAGE\"].append(lang)\n\n    # Extraction du DOMAIN (secteurs d'activité)\n    common_domains = [\"Marketing\", \"Finance\", \"Santé\", \"Technologie\", \"Retail\", \"Éducation\"]\n    for domain in common_domains:\n        if re.search(rf\"\\b{domain}\\b\", texte, re.IGNORECASE):\n            resultat[\"DOMAIN\"].append(domain)\n    # Si aucun domaine explicite, on peut déduire \"Technologie\" pour un poste tech\n    if not resultat[\"DOMAIN\"] and re.search(r\"Développeur|Data|API|Javascript\", texte, re.IGNORECASE):\n        resultat[\"DOMAIN\"].append(\"Technologie\")\n\n    # Extraction de la VILLE (amélioration pour éviter les faux positifs et limiter la capture)\n    # Chercher des villes après des mots comme \"à\", \"basé à\", ou des noms géographiques\n    ville_match = re.search(r\"(?:à|basé à|situé à)\\s+([A-Z][a-zA-Z]*(?:-[A-Z][a-zA-Z]*)*)\\b(?!\\s*(Groupe|Entreprise|Organisation))\", texte)\n    if ville_match:\n        ville = ville_match.group(1).strip()\n        if not re.search(r\"\\b(Groupe|ADEO|Entreprise|Organisation)\\b\", ville, re.IGNORECASE):\n            resultat[\"VILLE\"].append(ville)\n    else:\n        # Alternative : chercher des noms de villes simples sans capturer le texte suivant\n        ville_alt_match = re.search(r\"\\b[A-Z][a-z]+(?:-[A-Z][a-z]+)*\\b(?!\\s*(Groupe|Entreprise|Organisation|est|une))\", texte)\n        if ville_alt_match:\n            ville = ville_alt_match.group(0).strip()\n            if not re.search(r\"\\b(Groupe|ADEO|Entreprise|Organisation)\\b\", ville, re.IGNORECASE):\n                resultat[\"VILLE\"].append(ville)\n\n    return resultat\n\n# Vérifier si items contient au moins un élément et si DESCRIPTION existe\nif items and \"DESCRIPTION\" in items[0][\"json\"]:\n    informations = extraire_informations(items[0][\"json\"][\"DESCRIPTION\"])\n    # Retourner le résultat dans une liste avec un seul élément\n    result = [{\"json\": informations}]\nelse:\n    # Si DESCRIPTION n'existe pas, retourner un message d'erreur\n    result = [{\"json\": {\"error\": \"DESCRIPTION field not found in the first item\"}}]\n\n# Retourner le résultat\nreturn result"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "d16203c1-f18c-4097-95b1-8dab0bf088a0",
+      "name": "Analyse_des_données-d-offre_pdf"
+    },
+    {
+      "parameters": {
+        "table": {
+          "__rl": true,
+          "value": "DEMANDES_TEXTES_NEW",
+          "mode": "list",
+          "cachedResultName": "DEMANDES_TEXTES_NEW"
+        },
+        "dataMode": "defineBelow",
+        "valuesToSend": {
+          "values": [
+            {
+              "column": "DESCRIPTION",
+              "value": "={{ $json.DESCRIPTION }}"
+            },
+            {
+              "column": "POSTE",
+              "value": "={{ $json.POSTE }}"
+            },
+            {
+              "column": "SKILLS",
+              "value": "={{ $json.SKILLS }}"
+            },
+            {
+              "column": "ENVIRONMENT",
+              "value": "={{ $json.ENVIRONMENT }}"
+            },
+            {
+              "column": "LANGUAGE",
+              "value": "={{ $json.LANGUAGE }}"
+            },
+            {
+              "column": "DOMAIN",
+              "value": "={{ $json.DOMAIN }}"
+            },
+            {
+              "column": "VILLE",
+              "value": "={{ $json.VILLE }}"
+            },
+            {
+              "column": "PROCESSED"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        1104,
+        0
+      ],
+      "id": "1c5b3fc7-dce9-4503-bd7c-2323ee0e8533",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "mySql": {
+          "id": "zDTS8yqdMUuzAYAD",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "TRUNCATE TABLE DEMANDES_TEXTES_NEW;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        224,
+        0
+      ],
+      "id": "cfaf355b-0a24-415a-a108-610f0b43106a",
+      "name": "Execute a SQL query1",
+      "credentials": {
+        "mySql": {
+          "id": "zDTS8yqdMUuzAYAD",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "TRUNCATE TABLE DEMANDES_TEXTES;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        1328,
+        0
+      ],
+      "id": "8235842e-f9e3-400c-85cb-e2a0c760e402",
+      "name": "Execute a SQL query2",
+      "credentials": {
+        "mySql": {
+          "id": "zDTS8yqdMUuzAYAD",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select ID, DESCRIPTION, PROCESSED from DEMANDES_TEXTES",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        448,
+        0
+      ],
+      "id": "6ed0c18c-36ed-4bfc-a73f-10a1af12f135",
+      "name": "Execute a SQL query3",
+      "credentials": {
+        "mySql": {
+          "id": "zDTS8yqdMUuzAYAD",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n  ID,\n  POSTE,\n  EXPERIENCE_MIN,\n  EXPERIENCE_MAX,\n  SKILLS,\n  ENVIRONMENT,\n  LANGUAGE,\n  DOMAIN,\n  DESCRIPTION,\n  VILLE,\n  SUBMITTEDAT,\n  FORMMODE,\n  REQUEST_ID\nFROM DEMANDES",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mySql",
+      "typeVersion": 2.4,
+      "position": [
+        448,
+        240
+      ],
+      "id": "ad488577-638f-4e3c-8c23-92d523168ab8",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "mySql": {
+          "id": "zDTS8yqdMUuzAYAD",
+          "name": "MySQL account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\n\nconsole.log(\"Raw input item:\", item);\nconsole.log(\"VILLE value from item:\", item[\"VILLE\"]);\n\nconst swords = [\n  'alors', 'au', 'aucuns', 'aussi', 'autre', 'avant', 'avec', 'avoir', 'bon',\n  'car', 'ce', 'cela', 'ces', 'ceux', 'chaque', 'ci', 'comme', 'comment',\n  'dans', 'des', 'du', 'dedans', 'dehors', 'depuis', 'devrait', 'doit', 'donc',\n  'dos', 'droite', 'début', 'elle', 'elles', 'en', 'encore', 'essai', 'est',\n  'et', 'eu', 'fait', 'faites', 'fois', 'font', 'force', 'haut', 'hors',\n  'ici', 'il', 'ils', 'je', 'juste', 'la', 'le', 'les', 'leur', 'là', 'ma',\n  'maintenant', 'mais', 'mes', 'mine', 'moins', 'mon', 'mot', 'même', 'ni',\n  'nommés', 'notre', 'nous', 'nouveaux', 'ou', 'où', 'par', 'parce', 'parole',\n  'pas', 'personnes', 'peu', 'peut', 'plupart', 'pour', 'pourquoi', 'quand',\n  'que', 'quel', 'quelle', 'quelles', 'quels', 'qui', 'sa', 'sans', 'ses',\n  'seulement', 'si', 'sien', 'son', 'sont', 'sous', 'soyez', 'sujet', 'sur',\n  'ta', 'tandis', 'tellement', 'tels', 'tes', 'ton', 'tous', 'tout', 'trop',\n  'très', 'tu', 'valeur', 'voie', 'voient', 'vont', 'votre', 'vous', 'vu',\n  'ça', 'étaient', 'état', 'étions', 'été', 'être'\n];\n\nconst phraseSeparator = /[.,;:!?]+/;\n\nfunction splitIntoPhrases(text) {\n  if (typeof text !== 'string' || !text.trim()) return [];\n  return text\n    .split(phraseSeparator)\n    .map(phrase => phrase.trim())\n    .filter(phrase => phrase.length > 1 && !swords.includes(phrase.toLowerCase()));\n}\n\nfunction processCityField(field) {\n  if (typeof field !== 'string' || !field.trim()) return [];\n  console.log(\"Processing VILLE:\", field); // Debug log\n  return field\n    .split(',')\n    .map(city => city.trim())\n    .filter(city => city.length > 1 && !swords.includes(city.toLowerCase()));\n}\n\nfunction processField(field) {\n  if (Array.isArray(field)) {\n    return field.join(' ').split(phraseSeparator)\n      .map(item => item.trim())\n      .filter(item => item.length > 1 && !swords.includes(item.toLowerCase()));\n  }\n  return splitIntoPhrases(field);\n}\n\nconst cleanedItem = {\n  request_id: item[\"ID\"],\n  DESCRIPTION: processField(item.DESCRIPTION),\n  POSTE: processField(item.POSTE),\n  EXPERIENCE_MIN: item[\"EXPERIENCE_MIN NUMBER\"],\n  EXPERIENCE_MAX: item[\"EXPERIENCE_MAX NUMBER\"],\n  SKILLS: processField(item.SKILLS),\n  ENVIRONMENT: processField(item.ENVIRONMENT),\n  LANGUAGE: processField(item.LANGUAGE),\n  DOMAIN: processField(item.DOMAIN),\n  VILLE: processCityField(item[\"VILLE\"]),\n  SUBMITTED_AT: item.submittedAt || null,\n  FORM_MODE: processField(item.formMode)\n};\n\nreturn [{ json: cleanedItem }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        240
+      ],
+      "id": "cc5572b8-e5f2-4c65-9159-3eb86f443b9e",
+      "name": "Traitement de la demande RH"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "weviiApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        224,
+        240
+      ],
+      "id": "ed4d5838-7e74-4538-8bb9-f066cdac5304",
+      "name": "Webhook1",
+      "webhookId": "35b30ae9-415c-4c52-8c63-c86be5ef5ef4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "89d43455-4173-443b-b6aa-b83de8127970",
+              "name": "request_id",
+              "value": "={{ $json.request_id }}",
+              "type": "number"
+            },
+            {
+              "id": "75db3950-b22e-4b4a-af42-02c6ccf10d9e",
+              "name": "POSTE",
+              "value": "={{ $json.POSTE }}",
+              "type": "array"
+            },
+            {
+              "id": "ca326e16-b06c-4bfc-91e1-a23f9f84c240",
+              "name": "DESCRIPTION",
+              "value": "={{ $json.DESCRIPTION }}",
+              "type": "array"
+            },
+            {
+              "id": "cd728a53-8a91-4fd4-97d1-4201fb4ce8ef",
+              "name": "SKILLS",
+              "value": "={{ $json.SKILLS }}",
+              "type": "array"
+            },
+            {
+              "id": "404fb71b-7e12-4764-b886-34ec392ab3c8",
+              "name": "ENVIRONMENT",
+              "value": "={{ $json.ENVIRONMENT }}",
+              "type": "array"
+            },
+            {
+              "id": "ad64a4fa-6500-4483-9727-3e988236a0cd",
+              "name": "LANGUAGE",
+              "value": "={{ $json.LANGUAGE }}",
+              "type": "array"
+            },
+            {
+              "id": "3f51fb48-7ca7-4ca7-98d3-2ab4c6048212",
+              "name": "DOMAIN",
+              "value": "={{ $json.DOMAIN }}",
+              "type": "array"
+            },
+            {
+              "id": "3ed82532-3306-4902-b875-61f61db5e6bb",
+              "name": "VILLE",
+              "value": "={{ $json.VILLE }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        896,
+        240
+      ],
+      "id": "9fb23f35-ae94-4c45-bc15-8afd47cb7238",
+      "name": "Mapping1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://8c1c-176-175-194-1.ngrok-free.app/trigger",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"request_id\": \"{{ $json.request_id }}\"\n}  ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1104,
+        240
+      ],
+      "id": "3825f880-c0a0-4aa2-9204-c0f965e6555c",
+      "name": "HTTP Request1",
+      "executeOnce": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapping": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyse_des_données-d-offre_pdf": {
+      "main": [
+        [
+          {
+            "node": "Mapping",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in a table": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query1": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query3": {
+      "main": [
+        [
+          {
+            "node": "Analyse_des_données-d-offre_pdf",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Traitement de la demande RH",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Traitement de la demande RH": {
+      "main": [
+        [
+          {
+            "node": "Mapping1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook1": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapping1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9c9a8162-ad6d-4496-a4ae-d9dcceb845de",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "e3ae77d6a9bbd56c89698a2f3b8da67dbe46e4503dc35a9b1fa34f3e3758c7fe"
+  },
+  "id": "qF2x6Yg0rBzrG6IV",
+  "tags": []
+}
