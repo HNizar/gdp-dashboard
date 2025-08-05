@@ -1,3 +1,24 @@
+## streamlit_app.py
+Interface web développée avec Streamlit.
+Permet à l’utilisateur de :
+charger un CV (PDF) ou remplir un formulaire
+lancer le traitement
+visualiser les résultats (matching, similarité, etc.)
+## My workflow.json (n8n)
+Dernier workflow n8n modifié (utilisé faute d’accès direct à l’API).
+Fonctions principales :
+Vider les tables correspondantes dans la base de données.
+Insérer une nouvelle demande utilisateur.
+Déclencher automatiquement le script IA WeviiAutoSource.py une fois la demande insérée.
+Deux tables sont utilisées :
+Table1 — dédiée aux fichiers PDF importés
+Table2 — dédiée aux données saisies via formulaire
+##  WeviiAutoSource.py
+Détecte automatiquement la source des données importées (fichier PDF ou formulaire rempli via interface).
+Calcule la similarité sémantique entre les candidats stockés dans la base de données et les données nouvellement importées.
+Permet d’identifier rapidement le candidat le plus pertinent par rapport à une nouvelle demande.
+
+
 Pour exécuter le code Ia, vous devez installer les bibliothèques Python suivantes. 
 Voici la liste des dépendances nécessaires, basées sur les importations et l'utilisation dans le code :
 
